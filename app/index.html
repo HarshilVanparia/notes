@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Notes</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Segoe MDL2 Assets for Window Controls */
+    @font-face {
+      font-family: 'Segoe MDL2 Assets';
+      src: local('Segoe MDL2 Assets');
+    }
+    .control { font-family: 'Segoe MDL2 Assets', sans-serif; }
+  </style>
+</head>
+<body>
+  <div class="titlebar">
+    <div class="drag-region">Notes</div>
+    <div class="window-controls">
+      <div class="control" id="minBtn">&#xE921;</div>
+      <div class="control" id="maxBtn">&#xE922;</div>
+      <div class="control close" id="closeBtn">&#xE8BB;</div>
+    </div>
+  </div>
+  
+  <div class="menubar">
+    <div class="menu" id="fileMenu">
+      <div class="menu-label">File</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuNew">New <span class="hotkey">Ctrl+N</span></div>
+        <div class="menu-action" id="menuOpen">Open... <span class="hotkey">Ctrl+O</span></div>
+        <div class="menu-action" id="menuSave">Save <span class="hotkey">Ctrl+S</span></div>
+        <div class="menu-action" id="menuSaveAs">Save As... <span class="hotkey">Ctrl+Shift+S</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-action" id="menuExit">Exit <span class="hotkey">Alt+F4</span></div>
+      </div>
+    </div>
+    <div class="menu" id="editMenu">
+      <div class="menu-label">Edit</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuUndo">Undo <span class="hotkey">Ctrl+Z</span></div>
+        <div class="menu-action" id="menuRedo">Redo <span class="hotkey">Ctrl+Y</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-action" id="menuCut">Cut <span class="hotkey">Ctrl+X</span></div>
+        <div class="menu-action" id="menuCopy">Copy <span class="hotkey">Ctrl+C</span></div>
+        <div class="menu-action" id="menuPaste">Paste <span class="hotkey">Ctrl+V</span></div>
+        <div class="menu-action" id="menuSelectAll">Select All <span class="hotkey">Ctrl+A</span></div>
+      </div>
+    </div>
+    <div class="menu" id="viewMenu">
+      <div class="menu-label">View</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuZoomIn">Zoom In <span class="hotkey">Ctrl++</span></div>
+        <div class="menu-action" id="menuZoomOut">Zoom Out <span class="hotkey">Ctrl+-</span></div>
+        <div class="menu-action" id="menuZoomReset">Reset Zoom <span class="hotkey">Ctrl+0</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-action" id="menuBgSettings">Background...</div>
+      </div>
+    </div>
+    <div class="menu" id="searchMenu">
+      <div class="menu-label">Search</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuFind">Find <span class="hotkey">Ctrl+F</span></div>
+      </div>
+    </div>
+    <div class="menu" id="insertMenu">
+      <div class="menu-label">Insert</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuInsertImage">Image <span class="hotkey">Ctrl+I</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div class="tabs-container">
+      <div class="tabs" id="tabsList"></div>
+      <div class="add-tab" id="addTabBtn">+</div>
+    </div>
+    
+    <div class="editor-container" id="editorContainer"></div>
+    
+    <div class="status-bar">
+      <span id="statusInfo">Ready</span>
+      <span id="wordCount">Words: 0 | Chars: 0</span>
+      <span id="zoomInfo">100%</span>
+    </div>
+  </div>
+  
+  <div class="floating-panel hidden" id="formatPanel">
+    <button id="fmtBold"><b>B</b></button>
+    <button id="fmtItalic"><i>I</i></button>
+    <button id="fmtUnderline"><u>U</u></button>
+    <div class="separator"></div>
+    <button id="fmtSizeInc">A+</button>
+    <button id="fmtSizeDec">A-</button>
+    <div class="separator"></div>
+    <input type="color" id="fmtColor" title="Text Color">
+    <input type="color" id="fmtHighlight" title="Highlight Color" value="#ffff00">
+    <button id="fmtHighlightClear" title="Clear Highlight" style="font-size:10px;">None</button>
+  </div>
+  
+  <div class="find-panel hidden" id="findPanel">
+    <input type="text" id="findInput" placeholder="Find...">
+    <button id="findNextBtn">Next</button>
+    <button id="findPrevBtn">Prev</button>
+    <button id="findCloseBtn">X</button>
+  </div>
+  
+  <div class="settings-overlay hidden" id="bgOverlay">
+    <div class="dialog">
+      <h3>Background Settings</h3>
+      <div class="dialog-row">
+        <label>Image:</label>
+        <input type="file" id="bgFileInput" accept="image/*" style="background:transparent;border:none;">
+      </div>
+      <div class="dialog-row">
+        <label>Opacity:</label>
+        <input type="range" id="bgOpacityInput" min="0" max="1" step="0.05" value="0.2">
+        <span id="bgOpacityVal" style="margin-left:8px;font-size:12px;width:30px;">0.2</span>
+      </div>
+      <div class="dialog-actions">
+        <button id="bgCancelBtn">Cancel</button>
+        <button id="bgOkBtn">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "notes",
+  "version": "1.0.0",
+  "description": "Advanced Minimal Text Editor",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.example.notes",
+    "win": {
+      "target": "nsis",
+      "icon": "notes.png"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}
