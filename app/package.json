@@ -1,0 +1,28 @@
+{
+  "name": "ghostnotepad",
+  "version": "1.0.0",
+  "description": "GhostNotepad — rich notepad with draw canvas and image gallery",
+  "main": "main.js",
+  "author": "GhostNotepad",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.ghostnotepad.app",
+    "productName": "GhostNotepad",
+    "win": {
+      "target": "nsis",
+      "icon": "notes.png"
+    },
+    "nsis": {
+      "shortcutName": "GhostNotepad",
+      "uninstallDisplayName": "GhostNotepad"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

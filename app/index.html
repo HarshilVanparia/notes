@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GhostNotepad</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    @font-face { font-family: 'Segoe MDL2 Assets'; src: local('Segoe MDL2 Assets'); }
+    .control { font-family: 'Segoe MDL2 Assets', sans-serif; }
+  </style>
+</head>
+<body>
+  <div class="titlebar">
+    <div class="drag-region">GhostNotepad</div>
+    <div class="window-controls">
+      <div class="control" id="minBtn">&#xE921;</div>
+      <div class="control" id="maxBtn">&#xE922;</div>
+      <div class="control close" id="closeBtn">&#xE8BB;</div>
+    </div>
+  </div>
+
+  <div class="menubar">
+    <div class="menu" id="fileMenu">
+      <div class="menu-label">File</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuNew">New <span class="hotkey">Ctrl+N</span></div>
+        <div class="menu-action" id="menuOpen">Open... <span class="hotkey">Ctrl+O</span></div>
+        <div class="menu-action" id="menuSave">Save <span class="hotkey">Ctrl+S</span></div>
+        <div class="menu-action" id="menuSaveAs">Save As... <span class="hotkey">Ctrl+Shift+S</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-action" id="menuExit">Exit <span class="hotkey">Alt+F4</span></div>
+      </div>
+    </div>
+    <div class="menu" id="editMenu">
+      <div class="menu-label">Edit</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuUndo">Undo <span class="hotkey">Ctrl+Z</span></div>
+        <div class="menu-action" id="menuRedo">Redo <span class="hotkey">Ctrl+Y</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-action" id="menuCut">Cut <span class="hotkey">Ctrl+X</span></div>
+        <div class="menu-action" id="menuCopy">Copy <span class="hotkey">Ctrl+C</span></div>
+        <div class="menu-action" id="menuPaste">Paste <span class="hotkey">Ctrl+V</span></div>
+        <div class="menu-action" id="menuSelectAll">Select All <span class="hotkey">Ctrl+A</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-action" id="menuFind">Find <span class="hotkey">Ctrl+F</span></div>
+      </div>
+    </div>
+    <div class="menu" id="viewMenu">
+      <div class="menu-label">View</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuZoomIn">Zoom In <span class="hotkey">Ctrl++</span></div>
+        <div class="menu-action" id="menuZoomOut">Zoom Out <span class="hotkey">Ctrl+-</span></div>
+        <div class="menu-action" id="menuZoomReset">Reset Zoom <span class="hotkey">Ctrl+0</span></div>
+        <div class="menu-separator"></div>
+        <div class="menu-action" id="menuBgSettings">Background...</div>
+      </div>
+    </div>
+    <div class="menu" id="helpMenu">
+      <div class="menu-label">Help</div>
+      <div class="menu-dropdown">
+        <div class="menu-action" id="menuShortcuts">Shortcuts <span class="hotkey">?</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div class="tabs-container">
+      <div class="tabs" id="tabsList"></div>
+      <div class="add-tab" id="addTabBtn">+</div>
+    </div>
+
+    <div class="styling-toolbar" id="stylingToolbar">
+      <button class="toolbar-btn" id="toolCodeBlock" title="Code Block">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button class="toolbar-btn" id="toolInlineCode" title="Inline Code">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M16 18L22 12L16 6M8 6L2 12L8 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="toolbar-btn" id="toolQuote" title="Quote Block">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 21C3 21 3 15 3 12C3 9 5 7 7 7C7 7 5 11 7 12C9 13 9 12 9 12C9 12 11 14 9 17C7 20 3 21 3 21Z" fill="currentColor" opacity="0.7"/><path d="M15 21C15 21 15 15 15 12C15 9 17 7 19 7C19 7 17 11 19 12C21 13 21 12 21 12C21 12 23 14 21 17C19 20 15 21 15 21Z" fill="currentColor" opacity="0.7"/></svg>
+      </button>
+      <button class="toolbar-btn" id="toolTable" title="Insert Table">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="1" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" stroke-width="1.5"/><line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" id="toolBold" title="Bold"><b>B</b></button>
+      <button class="toolbar-btn" id="toolItalic" title="Italic"><i>I</i></button>
+      <button class="toolbar-btn" id="toolUnderline" title="Underline"><u>U</u></button>
+      <button class="toolbar-btn" id="toolStrike" title="Strikethrough"><s>S</s></button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" id="toolBulletList" title="Bullet List">&#x2022;</button>
+      <button class="toolbar-btn" id="toolNumberList" title="Numbered List">1.</button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" id="toolHeading1" title="Heading 1"><b>H1</b></button>
+      <button class="toolbar-btn" id="toolHeading2" title="Heading 2"><b>H2</b></button>
+      <button class="toolbar-btn" id="toolHeading3" title="Heading 3"><b>H3</b></button>
+      <button class="toolbar-btn" id="toolMarkdown" title="Toggle Markdown Preview">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 8V16L9 12L12 16V8M15 8V16M18 8V16L21 10" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <div class="toolbar-spacer"></div>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" id="toolDrawToggle" title="Draw">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 21L8 16L18 6L21 9L11 19L3 21Z" stroke="currentColor" stroke-width="1.5"/><path d="M14 6L18 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button class="toolbar-btn" id="toolGallery" title="Image Gallery">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+    </div>
+
+    <div class="editor-container" id="editorContainer"></div>
+
+    <div class="status-bar">
+      <span id="statusInfo">Ready</span>
+      <span id="wordCount">Words: 0 | Chars: 0</span>
+      <span id="zoomInfo">100%</span>
+    </div>
+  </div>
+
+  <!-- Floating format panel -->
+  <div class="floating-panel hidden" id="formatPanel">
+    <button id="fmtBold"><b>B</b></button>
+    <button id="fmtItalic"><i>I</i></button>
+    <button id="fmtUnderline"><u>U</u></button>
+    <button id="fmtBullet" title="Bullet List">&#x2022;</button>
+    <button id="fmtNumber" title="Numbered List">1.</button>
+    <div class="separator"></div>
+    <button id="fmtSizeInc" class="selection-only">A+</button>
+    <button id="fmtSizeDec" class="selection-only">A-</button>
+    <div class="separator"></div>
+    <input type="color" id="fmtColor" class="selection-only" title="Text Color">
+    <input type="color" id="fmtHighlight" class="selection-only" title="Highlight Color" value="#ffff00">
+    <button id="fmtHighlightClear" class="selection-only" title="Clear Highlight">None</button>
+  </div>
+
+  <!-- Find panel -->
+  <div class="find-panel hidden" id="findPanel">
+    <input type="text" id="findInput" placeholder="Find in file...">
+    <span id="findCount" class="find-count-label">0/0</span>
+    <button id="findNextBtn">Next</button>
+    <button id="findPrevBtn">Prev</button>
+    <button id="findCloseBtn">X</button>
+  </div>
+
+  <!-- Full-screen Draw Canvas -->
+  <div class="draw-overlay hidden" id="drawOverlay">
+    <header class="draw-header">
+      <div class="draw-header-text">
+        <h2 class="draw-heading">Draw</h2>
+        <p class="draw-hint">Strokes are saved with your note — not pasted as images</p>
+      </div>
+      <button type="button" class="draw-done-btn" id="drawSaveBtn">Done</button>
+    </header>
+    <div class="draw-toolbar" id="drawToolbar">
+      <section class="draw-section">
+        <span class="draw-section-label">Tools</span>
+        <div class="draw-section-body">
+          <button type="button" class="draw-tool-btn active" id="drawToolPen" title="Pen (P)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 21L8 16L18 6L21 9L11 19L3 21Z" stroke="currentColor" stroke-width="1.5"/><path d="M14 6L18 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Pen</span>
+          </button>
+          <button type="button" class="draw-tool-btn" id="drawToolEraser" title="Eraser (E)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 17L10 10L14 14L7 21H3V17Z" stroke="currentColor" stroke-width="1.5"/><line x1="14" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>
+            <span>Eraser</span>
+          </button>
+        </div>
+      </section>
+      <section class="draw-section draw-section-colors">
+        <span class="draw-section-label">Color</span>
+        <div class="draw-section-body draw-colors-row">
+          <button type="button" class="draw-color active" data-color="#ffffff" style="background:#fff" title="White"></button>
+          <button type="button" class="draw-color" data-color="#e0e0e0" style="background:#e0e0e0" title="Light gray"></button>
+          <button type="button" class="draw-color" data-color="#888888" style="background:#888" title="Gray"></button>
+          <button type="button" class="draw-color" data-color="#ff5252" style="background:#ff5252" title="Red"></button>
+          <button type="button" class="draw-color" data-color="#ffb300" style="background:#ffb300" title="Orange"></button>
+          <button type="button" class="draw-color" data-color="#ffeb3b" style="background:#ffeb3b" title="Yellow"></button>
+          <button type="button" class="draw-color" data-color="#4caf50" style="background:#4caf50" title="Green"></button>
+          <button type="button" class="draw-color" data-color="#2196f3" style="background:#2196f3" title="Blue"></button>
+          <button type="button" class="draw-color" data-color="#9c27b0" style="background:#9c27b0" title="Purple"></button>
+          <button type="button" class="draw-color" data-color="#000000" style="background:#000;border:1px solid #555" title="Black"></button>
+          <label class="draw-custom-color-wrap" title="Custom color">
+            <input type="color" id="drawCustomColor" value="#ffffff">
+            <span>Custom</span>
+          </label>
+        </div>
+      </section>
+      <section class="draw-section">
+        <span class="draw-section-label">Size</span>
+        <div class="draw-section-body draw-thickness-row">
+          <button type="button" class="draw-thickness-btn" data-thickness="2" title="Thin"><span class="stroke-preview thin"></span><span class="stroke-label">Thin</span></button>
+          <button type="button" class="draw-thickness-btn active" data-thickness="4" title="Normal"><span class="stroke-preview normal"></span><span class="stroke-label">Normal</span></button>
+          <button type="button" class="draw-thickness-btn" data-thickness="8" title="Thick"><span class="stroke-preview thick"></span><span class="stroke-label">Thick</span></button>
+          <button type="button" class="draw-thickness-btn" data-thickness="14" title="Bold"><span class="stroke-preview bold"></span><span class="stroke-label">Bold</span></button>
+        </div>
+      </section>
+      <section class="draw-section">
+        <span class="draw-section-label">Actions</span>
+        <div class="draw-section-body">
+          <button type="button" class="draw-action-btn" id="drawUndoBtn" title="Undo (Ctrl+Z)">Undo</button>
+          <button type="button" class="draw-action-btn draw-action-danger" id="drawClearBtn" title="Clear canvas">Clear</button>
+        </div>
+      </section>
+    </div>
+    <div class="draw-canvas-wrap">
+      <canvas id="drawCanvasFull" class="draw-canvas-full"></canvas>
+    </div>
+  </div>
+
+  <!-- Image Gallery Panel -->
+  <div class="gallery-overlay hidden" id="galleryOverlay">
+    <div class="gallery-header">
+      <h3>Image Gallery</h3>
+      <button class="gallery-close" id="galleryClose">&times;</button>
+    </div>
+    <div class="gallery-grid" id="galleryGrid">
+      <div class="gallery-empty">No images yet. Use + Add Image below.</div>
+    </div>
+    <div class="gallery-footer">
+      <button class="gallery-add-btn" id="galleryAddBtn">+ Add Image</button>
+    </div>
+    <input type="file" id="galleryFileInput" accept="image/*" multiple style="display:none">
+  </div>
+
+  <!-- Shortcuts Modal -->
+  <div class="settings-overlay hidden" id="shortcutsOverlay">
+    <div class="dialog shortcuts-dialog shortcuts-dialog-full">
+      <h3>Keyboard Shortcuts &amp; Actions</h3>
+      <p class="shortcuts-intro">Quick reference for everything you can do in GhostNotepad.</p>
+      <div class="shortcuts-grid" id="shortcutsGrid"></div>
+      <div class="dialog-actions">
+        <button id="shortcutsCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Background Settings -->
+  <div class="settings-overlay hidden" id="bgOverlay">
+    <div class="dialog">
+      <h3>Background Settings</h3>
+      <div class="dialog-row">
+        <label>Image:</label>
+        <input type="file" id="bgFileInput" accept="image/*" style="background:transparent;border:none;">
+      </div>
+      <div class="dialog-row">
+        <label>Color:</label>
+        <input type="color" id="bgColorInput" value="#0a0a0a">
+      </div>
+      <div class="dialog-actions">
+        <button id="bgCancelBtn">Cancel</button>
+        <button id="bgOkBtn">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
