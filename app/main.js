@@ -135,8 +135,8 @@ ipcMain.handle('dialog:saveFile', async (event, content, filePath) => {
   }
   const { canceled, filePath: newPath } = await dialog.showSaveDialog(mainWindow, {
     filters: [
-      { name: 'GhostNotepad Files', extensions: ['notes'] },
-      { name: 'Text Files', extensions: ['txt'] }
+      { name: 'Text Files', extensions: ['txt'] },
+      { name: 'GhostNotepad Files', extensions: ['notes'] }
     ]
   });
   if (canceled) return null;

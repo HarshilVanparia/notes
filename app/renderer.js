@@ -826,14 +826,12 @@ function updateGalleryGrid() {
       '<div class="gallery-item-info"><div class="img-name">' + escapeHtml(img.name) + '</div>' +
       '<div class="img-size">' + (dims ? dims + ' · ' : '') + sizeKB + ' KB</div></div>' +
       '<div class="gallery-item-actions">' +
-      '<button type="button" class="gal-insert" title="Insert in note">&#8615;</button>' +
+      '<button type="button" class="gal-view" title="View / Zoom" style="font-size:12px;">🔍</button>' +
       '<button type="button" class="gal-delete" title="Remove from gallery">&#10005;</button></div>';
-    item.querySelector('.gal-insert')?.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      const ed = getActiveEditor();
-      if (ed) { ed.focus(); document.execCommand('insertImage', false, img.data); updateActiveTabContent(); }
-      closeGallery();
-    });
+    // Click thumbnail or view button to open viewer
+    const openViewer = (ev) => { ev.stopPropagation(); openImageViewer(img); };
+    item.querySelector('.gallery-thumb')?.addEventListener('click', openViewer);
+    item.querySelector('.gal-view')?.addEventListener('click', openViewer);
     item.querySelector('.gal-delete')?.addEventListener('click', (ev) => {
       ev.stopPropagation();
       if (!confirm('Remove this image from the gallery?')) return;
@@ -849,6 +847,441 @@ function updateGalleryGrid() {
 }
 function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+
+// ============== Image Viewer (zoom/magnify) ==============
+let viewerState = { open: false, scale: 1, panX: 0, panY: 0, dragging: false, dragStartX: 0, dragStartY: 0, imgData: null, viewerImgId: null };
+
+function openImageViewer(imgObj) {
+  const overlay = document.getElementById('imageViewerOverlay');
+  const img = document.getElementById('imageViewerImg');
+  const title = document.getElementById('imageViewerTitle');
+  const label = document.getElementById('viewerZoomLabel');
+  if (!overlay || !img) return;
+
+  viewerState.open = true;
+  viewerState.imgData = imgObj;
+  viewerState.scale = 1;
+  viewerState.panX = 0;
+  viewerState.panY = 0;
+  viewerState.viewerImgId = imgObj.id;
+
+  img.src = imgObj.data;
+  img.className = 'image-viewer-img';
+  img.style.transform = 'scale(1) translate(0px, 0px)';
+  if (title) title.textContent = imgObj.name || 'Image Viewer';
+  if (label) label.textContent = '100%';
+
+  overlay.classList.remove('hidden');
+
+  img.onload = () => { fitImageToScreen(); img.onload = null; };
+}
+
+function closeImageViewer() {
+  const overlay = document.getElementById('imageViewerOverlay');
+  if (overlay) overlay.classList.add('hidden');
+  viewerState.open = false;
+  viewerState.imgData = null;
+}
+
+function fitImageToScreen() {
+  const img = document.getElementById('imageViewerImg');
+  const body = document.getElementById('imageViewerBody');
+  if (!img || !body || !img.naturalWidth || !img.naturalHeight) return;
+  const bodyRect = body.getBoundingClientRect();
+  const scaleX = (bodyRect.width - 40) / img.naturalWidth;
+  const scaleY = (bodyRect.height - 40) / img.naturalHeight;
+  viewerState.scale = Math.min(scaleX, scaleY, 1);
+  viewerState.panX = 0;
+  viewerState.panY = 0;
+  applyViewerTransform(true);
+}
+
+function applyViewerTransform(smooth) {
+  const img = document.getElementById('imageViewerImg');
+  const label = document.getElementById('viewerZoomLabel');
+  if (!img) return;
+  if (smooth) { img.classList.add('smooth'); setTimeout(() => img.classList.remove('smooth'), 200); }
+  else img.classList.remove('smooth');
+  img.style.transform = 'scale(' + viewerState.scale + ') translate(' + viewerState.panX + 'px, ' + viewerState.panY + 'px)';
+  if (label) label.textContent = Math.round(viewerState.scale * 100) + '%';
+}
+
+function viewerZoom(delta) {
+  viewerState.scale = Math.max(0.1, Math.min(20, viewerState.scale + delta));
+  applyViewerTransform(false);
+}
+
+function viewerResetZoom() {
+  viewerState.scale = 1;
+  viewerState.panX = 0;
+  viewerState.panY = 0;
+  applyViewerTransform(true);
+}
+
+function viewerDeleteCurrentImage() {
+  if (!viewerState.imgData || !activeTabId) return;
+  const tab = tabs.find(function(t) { return t.id === activeTabId; });
+  if (!tab || !tab.images) return;
+  if (!confirm('Delete this image from the gallery?')) return;
+  tab.images = tab.images.filter(function(x) { return x.id !== viewerState.viewerImgId; });
+  tab.isDirty = true;
+  updateTabTitle(activeTabId);
+  scheduleSessionSave();
+  closeImageViewer();
+  refreshGalleryIfOpen();
+}
+
+document.getElementById('viewerCloseBtn')?.addEventListener('click', closeImageViewer);
+document.getElementById('viewerZoomInBtn')?.addEventListener('click', function() { viewerZoom(0.25); });
+document.getElementById('viewerZoomOutBtn')?.addEventListener('click', function() { viewerZoom(-0.25); });
+document.getElementById('viewerFitBtn')?.addEventListener('click', fitImageToScreen);
+document.getElementById('viewerResetBtn')?.addEventListener('click', viewerResetZoom);
+document.getElementById('viewerDeleteBtn')?.addEventListener('click', viewerDeleteCurrentImage);
+
+document.getElementById('imageViewerOverlay')?.addEventListener('click', function(e) {
+  if (e.target.id === 'imageViewerOverlay' || e.target.id === 'imageViewerBody') closeImageViewer();
+});
+
+document.getElementById('imageViewerBody')?.addEventListener('wheel', function(e) {
+  if (!viewerState.open) return;
+  e.preventDefault();
+  e.stopPropagation();
+  viewerZoom(e.deltaY < 0 ? 0.15 : -0.15);
+}, { passive: false });
+
+(function initViewerPan() {
+  var body = document.getElementById('imageViewerBody');
+  if (!body) return;
+  body.addEventListener('mousedown', function(e) {
+    if (!viewerState.open || e.button !== 0) return;
+    viewerState.dragging = true;
+    viewerState.dragStartX = e.clientX - viewerState.panX * viewerState.scale;
+    viewerState.dragStartY = e.clientY - viewerState.panY * viewerState.scale;
+    body.classList.add('grabbing');
+  });
+  body.addEventListener('mousemove', function(e) {
+    if (!viewerState.dragging) return;
+    viewerState.panX = (e.clientX - viewerState.dragStartX) / viewerState.scale;
+    viewerState.panY = (e.clientY - viewerState.dragStartY) / viewerState.scale;
+    applyViewerTransform(false);
+  });
+  body.addEventListener('mouseup', function() { viewerState.dragging = false; body.classList.remove('grabbing'); });
+  body.addEventListener('mouseleave', function() { viewerState.dragging = false; body.classList.remove('grabbing'); });
+})();
+
+document.addEventListener('keydown', function(e) {
+  if (!viewerState.open) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeImageViewer(); return; }
+  if (e.key === '+' || e.key === '=') { e.preventDefault(); viewerZoom(0.25); return; }
+  if (e.key === '-') { e.preventDefault(); viewerZoom(-0.25); return; }
+  if (e.key === '0') { e.preventDefault(); viewerResetZoom(); return; }
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); fitImageToScreen(); return; }
+});
+
+// ============== Formatting Toolbar ==============
+// Track toggle modes
+var formatModes = { codeBlock: false, quote: false };
+
+function focusActiveEditor() {
+  var el = getActiveEditor();
+  if (el) { el.focus(); }
+  return el;
+}
+
+function updateFormatButtonState() {
+  document.getElementById('toolCodeBlock')?.classList.toggle('active', formatModes.codeBlock);
+  document.getElementById('toolQuote')?.classList.toggle('active', formatModes.quote);
+}
+
+function isInsideTag(tagName) {
+  var sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return false;
+  var node = sel.anchorNode;
+  while (node && node !== document.body) {
+    if (node.nodeName && node.nodeName.toLowerCase() === tagName) return true;
+    node = node.parentNode;
+  }
+  return false;
+}
+
+function insertBlockHtml(html) {
+  var el = focusActiveEditor();
+  if (!el) return;
+  el.focus();
+  insertHtmlAtCursor(html);
+  updateActiveTabContent();
+}
+
+// ---- Code Block Toggle ----
+document.getElementById('toolCodeBlock')?.addEventListener('click', function() {
+  var el = focusActiveEditor();
+  if (!el) return;
+
+  var sel = window.getSelection();
+  var text = (sel && sel.rangeCount > 0) ? sel.toString() : '';
+
+  if (text) {
+    // Wrap selected text in a code block
+    var codeHtml = '<pre style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;font-family:monospace;overflow-x:auto;margin:8px 0;white-space:pre;"><code>' + escapeHtml(text) + '</code></pre>';
+    sel.getRangeAt(0).deleteContents();
+    insertHtmlAtCursor(codeHtml);
+    updateActiveTabContent();
+  } else {
+    // No selection — insert a code block at cursor position
+    var pre = document.createElement('pre');
+    pre.style.cssText = 'background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;font-family:monospace;overflow-x:auto;margin:8px 0;white-space:pre;';
+    var code = document.createElement('code');
+    code.textContent = '\u200B';
+    pre.appendChild(code);
+    var br = document.createElement('br');
+    var sel2 = window.getSelection();
+    if (sel2 && sel2.rangeCount > 0) {
+      var range = sel2.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(br);
+      range.insertNode(pre);
+      // Place cursor inside the code element
+      var newRange = document.createRange();
+      newRange.setStart(code, 1);
+      newRange.collapse(true);
+      sel2.removeAllRanges();
+      sel2.addRange(newRange);
+    } else {
+      el.appendChild(pre);
+      el.appendChild(br);
+    }
+    updateActiveTabContent();
+  }
+});
+
+// ---- Quote Block Toggle ----
+document.getElementById('toolQuote')?.addEventListener('click', function() {
+  var el = focusActiveEditor();
+  if (!el) return;
+
+  var sel = window.getSelection();
+  var text = (sel && sel.rangeCount > 0) ? sel.toString() : '';
+
+  if (text) {
+    // Wrap selected text in a quote block
+    var quoteHtml = '<blockquote style="border-left:4px solid #0078d4;margin:8px 0;padding:8px 16px;background:rgba(0,120,212,0.08);color:#ccc;border-radius:0 6px 6px 0;">' + escapeHtml(text) + '</blockquote>';
+    sel.getRangeAt(0).deleteContents();
+    insertHtmlAtCursor(quoteHtml);
+    updateActiveTabContent();
+  } else {
+    // No selection — insert a blockquote at cursor position
+    var bq = document.createElement('blockquote');
+    bq.style.cssText = 'border-left:4px solid #0078d4;margin:8px 0;padding:8px 16px;background:rgba(0,120,212,0.08);color:#ccc;border-radius:0 6px 6px 0;';
+    bq.textContent = '\u200B';
+    var br2 = document.createElement('br');
+    var sel3 = window.getSelection();
+    if (sel3 && sel3.rangeCount > 0) {
+      var range2 = sel3.getRangeAt(0);
+      range2.deleteContents();
+      range2.insertNode(br2);
+      range2.insertNode(bq);
+      // Place cursor inside the blockquote
+      var newRange2 = document.createRange();
+      newRange2.setStart(bq.firstChild, 1);
+      newRange2.collapse(true);
+      sel3.removeAllRanges();
+      sel3.addRange(newRange2);
+    } else {
+      el.appendChild(bq);
+      el.appendChild(br2);
+    }
+    updateActiveTabContent();
+  }
+});
+
+// ---- Insert Table ----
+document.getElementById('toolTable')?.addEventListener('click', function() {
+  focusActiveEditor();
+  var html = '<table style="border-collapse:collapse;width:100%;margin:8px 0;">' +
+    '<tr>' +
+    '<td style="border:1px solid #555;padding:8px 12px;background:rgba(0,120,212,0.15);font-weight:600;">Header 1</td>' +
+    '<td style="border:1px solid #555;padding:8px 12px;background:rgba(0,120,212,0.15);font-weight:600;">Header 2</td>' +
+    '<td style="border:1px solid #555;padding:8px 12px;background:rgba(0,120,212,0.15);font-weight:600;">Header 3</td>' +
+    '</tr>' +
+    '<tr>' +
+    '<td style="border:1px solid #555;padding:8px 12px;">Cell 1</td>' +
+    '<td style="border:1px solid #555;padding:8px 12px;">Cell 2</td>' +
+    '<td style="border:1px solid #555;padding:8px 12px;">Cell 3</td>' +
+    '</tr>' +
+    '<tr>' +
+    '<td style="border:1px solid #555;padding:8px 12px;">Cell 4</td>' +
+    '<td style="border:1px solid #555;padding:8px 12px;">Cell 5</td>' +
+    '<td style="border:1px solid #555;padding:8px 12px;">Cell 6</td>' +
+    '</tr>' +
+    '</table><p><br></p>';
+  insertBlockHtml(html);
+});
+
+// ---- Bold ----
+document.getElementById('toolBold')?.addEventListener('click', function() {
+  focusActiveEditor();
+  document.execCommand('bold', false, null);
+  updateActiveTabContent();
+});
+
+// ---- Italic ----
+document.getElementById('toolItalic')?.addEventListener('click', function() {
+  focusActiveEditor();
+  document.execCommand('italic', false, null);
+  updateActiveTabContent();
+});
+
+// ---- Underline ----
+document.getElementById('toolUnderline')?.addEventListener('click', function() {
+  focusActiveEditor();
+  document.execCommand('underline', false, null);
+  updateActiveTabContent();
+});
+
+// ---- Strikethrough ----
+document.getElementById('toolStrike')?.addEventListener('click', function() {
+  focusActiveEditor();
+  document.execCommand('strikeThrough', false, null);
+  updateActiveTabContent();
+});
+
+// ---- Bullet List ----
+document.getElementById('toolBulletList')?.addEventListener('click', function() {
+  focusActiveEditor();
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    var text = sel.toString();
+    if (text) {
+      var lines = text.split('\n').filter(function(l) { return l.trim().length > 0; });
+      var html = '<ul style="margin:8px 0;padding-left:24px;">';
+      for (var i = 0; i < lines.length; i++) {
+        html += '<li style="margin:4px 0;">' + escapeHtml(lines[i].trim()) + '</li>';
+      }
+      html += '</ul>';
+      sel.getRangeAt(0).deleteContents();
+      insertBlockHtml(html);
+    } else {
+      insertBlockHtml('<ul><li>Item</li></ul>');
+    }
+  }
+});
+
+// ---- Numbered List ----
+document.getElementById('toolNumberList')?.addEventListener('click', function() {
+  focusActiveEditor();
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    var text = sel.toString();
+    if (text) {
+      var lines = text.split('\n').filter(function(l) { return l.trim().length > 0; });
+      var html = '<ol style="margin:8px 0;padding-left:24px;">';
+      for (var i = 0; i < lines.length; i++) {
+        html += '<li style="margin:4px 0;">' + escapeHtml(lines[i].trim()) + '</li>';
+      }
+      html += '</ol>';
+      sel.getRangeAt(0).deleteContents();
+      insertBlockHtml(html);
+    } else {
+      insertBlockHtml('<ol><li>Item</li></ol>');
+    }
+  }
+});
+
+// ---- Heading 1 ----
+document.getElementById('toolHeading1')?.addEventListener('click', function() {
+  focusActiveEditor();
+  document.execCommand('formatBlock', false, 'h1');
+  updateActiveTabContent();
+});
+
+// ---- Heading 2 ----
+document.getElementById('toolHeading2')?.addEventListener('click', function() {
+  focusActiveEditor();
+  document.execCommand('formatBlock', false, 'h2');
+  updateActiveTabContent();
+});
+
+// ---- Heading 3 ----
+document.getElementById('toolHeading3')?.addEventListener('click', function() {
+  focusActiveEditor();
+  document.execCommand('formatBlock', false, 'h3');
+  updateActiveTabContent();
+});
+
+// ---- Toggle Markdown Preview ----
+let markdownPreviewActive = false;
+document.getElementById('toolMarkdown')?.addEventListener('click', function() {
+  var el = getActiveEditor();
+  if (!el) return;
+  markdownPreviewActive = !markdownPreviewActive;
+  document.getElementById('toolMarkdown')?.classList.toggle('active', markdownPreviewActive);
+  if (markdownPreviewActive) {
+    var raw = el.innerText || el.textContent || '';
+    el.innerHTML = renderMarkdown(raw);
+    el.contentEditable = 'false';
+    el.style.whiteSpace = 'normal';
+  } else {
+    el.contentEditable = 'true';
+    el.style.whiteSpace = 'pre-wrap';
+    updateActiveTabContent();
+  }
+});
+
+// ---- Track cursor position for active state ----
+function updateFormatActiveState() {
+  if (markdownPreviewActive) return;
+  // Bold / Italic / Underline / Strikethrough — check document.queryCommandState
+  document.getElementById('toolBold')?.classList.toggle('active', document.queryCommandState('bold'));
+  document.getElementById('toolItalic')?.classList.toggle('active', document.queryCommandState('italic'));
+  document.getElementById('toolUnderline')?.classList.toggle('active', document.queryCommandState('underline'));
+  document.getElementById('toolStrike')?.classList.toggle('active', document.queryCommandState('strikeThrough'));
+  // Heading state
+  var inH1 = isInsideTag('h1');
+  var inH2 = isInsideTag('h2');
+  var inH3 = isInsideTag('h3');
+  document.getElementById('toolHeading1')?.classList.toggle('active', inH1);
+  document.getElementById('toolHeading2')?.classList.toggle('active', inH2);
+  document.getElementById('toolHeading3')?.classList.toggle('active', inH3);
+  // List state
+  document.getElementById('toolBulletList')?.classList.toggle('active', isInsideTag('ul'));
+  document.getElementById('toolNumberList')?.classList.toggle('active', isInsideTag('ol'));
+  // Code state
+  document.getElementById('toolCodeBlock')?.classList.toggle('active', formatModes.codeBlock || isInsideTag('pre'));
+  // Quote state
+  document.getElementById('toolQuote')?.classList.toggle('active', formatModes.quote || isInsideTag('blockquote'));
+}
+
+// Attach to editor events to track active state
+document.addEventListener('selectionchange', function() {
+  if (!activeTabId) return;
+  if (drawState.open || markdownPreviewActive) return;
+  updateFormatActiveState();
+});
+
+function renderMarkdown(text) {
+  var html = escapeHtml(text);
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h3 style="color:#e0e0e0;margin:16px 0 8px;">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 style="color:#e0e0e0;margin:20px 0 10px;">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 style="color:#e0e0e0;margin:24px 0 12px;">$1</h1>');
+  // Bold and italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<b><i>$1</i></b>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
+  // Strikethrough
+  html = html.replace(/~~(.+?)~~/g, '<s>$1</s>');
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code style="background:#2d2d2d;color:#e06c75;padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>');
+  // Code blocks
+  html = html.replace(/```([\s\S]*?)```/g, '<pre style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;font-family:monospace;overflow-x:auto;"><code>$1</code></pre>');
+  // Blockquotes
+  html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:4px solid #0078d4;margin:8px 0;padding:8px 16px;background:rgba(0,120,212,0.08);color:#ccc;">$1</blockquote>');
+  // Horizontal rule
+  html = html.replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #555;margin:16px 0;">');
+  // Line breaks
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
 
 // ============== Shortcuts Modal ==============
 const SHORTCUT_GROUPS = [
